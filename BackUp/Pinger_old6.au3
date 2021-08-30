@@ -14,7 +14,7 @@ Author:	Wobi
 
 	Copyright (C) 2021 4Wobi.com - All rights reserved.
 
-	THIS IS AN UNFINISHED PROJECT - Feel free to use and modify
+	THIS IS AN UNFINISHED PROJECT - Feel free to use and modify it
 
 #ce ----------------------------------------------------------------------------------------------
 
@@ -222,9 +222,6 @@ Global $Tray_mi_Exit = TrayCreateItem("Exit")
 
 TraySetState($TRAY_ICONSTATE_SHOW)
 TraySetToolTip("4Wobi - Pinger")
-
-local_ip()
-external_ip()
 
 setGUI()
 
@@ -492,7 +489,7 @@ EndFunc   ;==>UDF_Ping
 Func SavePingToFile($ping)
 	Local $i_StampNow = _TimeGetStamp()
 	;Local $s_MakeString = _StringFormatTime($s_DefMakeString, $i_StampNow)
-	;Local $s_Value = _StringFormatTime('%#c', $i_StampNow)
+    ;Local $s_Value = _StringFormatTime('%#c', $i_StampNow)
 
 	Local $message = ($i_StampNow & "," & $pingadress & "," & $ping)
 	FileWriteLine($logpath, $message)
@@ -728,7 +725,7 @@ EndFunc   ;==>evalOverlayPos
 
 Func SetOnTop($GUI)
 	WinSetOnTop($GUI, "", $WINDOWS_ONTOP)
-EndFunc   ;==>SetOnTop
+EndFunc
 
 Func setGUI()
 	; SET GUI STUFF
@@ -764,33 +761,23 @@ Func _IsInternetConnected()
 	Return $aReturn[0] = 0
 EndFunc   ;==>_IsInternetConnected
 
-Func external_ip()
-	debug("Fetching External IP")
+Func ips()
 	Local $sPublicIP = _GetIP()
-	debug("External IP: " & $sPublicIP)
-	Return $sPublicIP
-EndFunc   ;==>external_ip
+ConsoleWrite("External IP: " & $sPublicIP & @CRLF)
 
-Func local_ip()
-	debug("Local IP: ")
-	If @IPAddress1 <> "0.0.0.0" Then
-		debug(@IPAddress1)
-		Return @IPAddress1
-	ElseIf @IPAddress2 <> "0.0.0.0" Then
-		debug(@IPAddress2)
-		Return @IPAddress2
-	ElseIf @IPAddress3 <> "0.0.0.0" Then
-		debug(@IPAddress3)
-		Return @IPAddress3
-	ElseIf @IPAddress4 <> "0.0.0.0" Then
-		debug(@IPAddress4)
-		Return @IPAddress4
-	Else
-		ConsoleWrite("NO IP FOUND")
-	EndIf
-EndFunc   ;==>local_ip
-
-
+ConsoleWrite("Local IP: ")
+If @IPAddress1 <> "0.0.0.0" Then
+	ConsoleWrite(@IPAddress1 & @CRLF)
+ElseIf @IPAddress2 <> "0.0.0.0" Then
+	ConsoleWrite(@IPAddress2 & @CRLF)
+ElseIf @IPAddress3 <> "0.0.0.0" Then
+	ConsoleWrite(@IPAddress3 & @CRLF)
+ElseIf @IPAddress4 <> "0.0.0.0" Then
+	ConsoleWrite(@IPAddress4 & @CRLF)
+Else
+	ConsoleWrite("NO IP FOUND")
+EndIf
+EndFunc
 
 Func debug($a)
 	If $DebugState = 1 Then

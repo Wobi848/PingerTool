@@ -2,8 +2,8 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=ico_apM_icon.ico
 #AutoIt3Wrapper_Res_Description=Pinging tool
-#AutoIt3Wrapper_Res_Fileversion=0.0.0.8
-#AutoIt3Wrapper_Res_ProductVersion=0.0.0.8
+#AutoIt3Wrapper_Res_Fileversion=0.0.0.5
+#AutoIt3Wrapper_Res_ProductVersion=0.0.0.5
 #AutoIt3Wrapper_Res_CompanyName=4Wobi
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
@@ -11,10 +11,10 @@
 
 Program: Ping-Overlay
 Author:	Wobi
+Date:	01.06.2021
+Version: 0.0.0.5
 
 	Copyright (C) 2021 4Wobi.com - All rights reserved.
-
-	THIS IS AN UNFINISHED PROJECT - Feel free to use and modify
 
 #ce ----------------------------------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ Author:	Wobi
 #include <WinApi.au3>
 #include <MsgBoxConstants.au3>
 #include <GuiTab.au3>
-#include <lib\ColorPicker.au3>
+#include <lib/ColorPicker.au3>
 #include <WinAPISysWin.au3>
 #include <Constants.au3>
 #include <GUIConstants.au3>
@@ -38,8 +38,6 @@ Author:	Wobi
 #include <WindowsConstants.au3>
 #include <SliderConstants.au3>
 #include <GuiListBox.au3>
-#include <lib\UnixTime.au3>
-#include <Inet.au3>
 
 Opt('MustDeclareVars', 1)
 Opt("TrayOnEventMode", 0)
@@ -52,25 +50,35 @@ TraySetClick(16)
 
 #Region ### ------ Global Variable ------ ###
 
-Global $VERSION = "0.0.0.8"
-Global $VDate = "18.06.2021"
+Global $VERSION = "0.0.0.5"
+Global $VDate = "01.06.2021"
 
-Dim Const $logpath = @ScriptDir & "\log\" & _NowDate() & ".csv"
+Dim Const $logpath = @ScriptDir & "\log\" & _NowDate() & ".log"
 Dim Const $settingspath = @ScriptDir & "\config\" & "settings.ini"
 Global $is_minimized = 0
+Global $is_overlayd = 0
 Global $SleepTime = 1000
 Global $ActualTime = TimerInit()
 Global $DiffTime
 Global $StartPing = 0
 Global $gSleep = 1
 Global $maxping = 1000
+Global $PingOverlayOffsetX = 50
+Global $PingOverlayOffsetY = $PingOverlayOffsetX
+Global $PingOVerlayColorTrans = 0x009DE7
+Global $OverlayLabelColor = 0xFFFF00
+Global $PingBGColor = 0x000000
+Global $OverlayPingLabelLow = 0xFF0000
 Global $GUI_cor_PingOverlayW = 71
 Global $GUI_cor_PingOverlayH = 38
+Global $SavePingtoFile = 0
+Global $pingadress = "8.8.8.8"
 Global $ZeroPing = 0
 Global $ZeroPingMin = 9
 Global $ZeroPingMax = 10
+Global $DebugState = 0
 Global $DebugGuiState = 0
-Global $is_overlayd
+Global $Debug_AutoScoll = 1
 
 ; Create custom (4 x 5) color palette
 Dim $aPalette[20] = _
@@ -80,41 +88,7 @@ Dim $aPalette[20] = _
 		0x0000FF, 0x000080, 0xFF00FF, 0x800080, _
 		0xC0DCC0, 0xA6CAF0, 0xFFFBF0, 0xA0A0A4]
 
-#EndRegion ### ------ Global Variable ------ ###
-
-#Region ### Folders ###
-If FileExists(@ScriptDir & "\log") Then
-Else
-	DirCreate(@ScriptDir & "\log")
-EndIf
-
-If FileExists(@ScriptDir & "\config") Then
-Else
-	DirCreate(@ScriptDir & "\config")
-EndIf
-#EndRegion ### Folders ###
-
-#Region ### Load_File ###
-; Create Variable
-Global $pingVal = 500
-Global $DebugState = 0
-Global $pingadress = "8.8.8.8"
-Global $PingOverlayOffsetX = 50
-Global $PingOverlayOffsetY = $PingOverlayOffsetX
-Global $PingOVerlayColorTrans = 0x009DE7
-Global $OverlayLabelColor = 0xFFFF00
-Global $PingBGColor = 0x000000
-Global $OverlayPingLabelLow = 0xFF0000
-Global $SavePingtoFile = 0
-Global $Debug_AutoScoll = 1
-Global $pingTransVal = 255
-Global $pingPos = 0
-Global $OverlayActive = 1
-Global $OVerlayBgActive = 0
-Global $PingFont = "Rubik"
-
-loadSettings()
-#EndRegion ### Load_File ###
+#EndRegion ### Global Variable ###
 
 #Region ### ------ GUI ------ ###
 Global $GUI_f_Pinger = GUICreate("4Wobi - Pinger", 256, 178, 317, 231)
@@ -122,7 +96,6 @@ Global $GUI_smi_Program = GUICtrlCreateMenu("&Program")
 Global $GUI_smi_Start = GUICtrlCreateMenuItem("Start" & @TAB & "F5", $GUI_smi_Program)
 Global $GUI_smi_Stop = GUICtrlCreateMenuItem("&Stop" & @TAB & "F6", $GUI_smi_Program)
 GUICtrlSetState(-1, $GUI_DISABLE)
-Global $GUI_smi_Save = GUICtrlCreateMenuItem("Save Settings", $GUI_smi_Program)
 Global $GUI_smi_ = GUICtrlCreateMenuItem("", $GUI_smi_Program)
 Global $GUI_smi_Exit = GUICtrlCreateMenuItem("&Exit", $GUI_smi_Program)
 Global $GUI_smi_Options = GUICtrlCreateMenu("&Options")
@@ -144,7 +117,7 @@ _GUICtrlStatusBar_SetText($GUI_sb, "", 3)
 Global $GUI_t_MainTab = GUICtrlCreateTab(0, 0, 249, 137)
 Global $GUI_ts_Ping = GUICtrlCreateTabItem("Ping")
 Global $GUI_g_Ping = GUICtrlCreateGroup("Ping", 4, 25, 241, 106)
-Global $GUI_i_Delay = GUICtrlCreateInput($pingVal, 52, 49, 106, 21, BitOR($GUI_SS_DEFAULT_INPUT, $ES_NUMBER))
+Global $GUI_i_Delay = GUICtrlCreateInput("500", 52, 49, 106, 21, BitOR($GUI_SS_DEFAULT_INPUT, $ES_NUMBER))
 Global $GUI_l_Delay = GUICtrlCreateLabel("Delay", 12, 51, 31, 17)
 Global $GUI_cb_SavePingToFile = GUICtrlCreateCheckbox("Save Data", 160, 49, 80, 17)
 Global $GUI_l_Adress = GUICtrlCreateLabel("Adress", 12, 75, 36, 17)
@@ -156,32 +129,33 @@ GUICtrlSetState(-1, $GUI_DISABLE)
 GUICtrlCreateGroup("", -99, -99, 1, 1)
 Global $GUI_ts_Overlay = GUICtrlCreateTabItem("Overlay")
 Global $GUI_g_Overlay = GUICtrlCreateGroup("Overlay", 4, 25, 241, 105)
-
 Global $GUI_cb_Overlay = GUICtrlCreateCheckbox("Overlay", 10, 40, 57, 17)
+GUICtrlSetState(-1, $GUI_CHECKED)
 Global $GUI_cb_OverlayBG = GUICtrlCreateCheckbox("Background", 68, 40, 80, 17)
-
 Global $GUI_rb_TopLeft = GUICtrlCreateRadio("TopLeft", 12, 94, 57, 17)
+GUICtrlSetState(-1, $GUI_CHECKED)
 Global $GUI_rb_TopRight = GUICtrlCreateRadio("TopRight", 84, 94, 65, 17)
 Global $GUI_rb_BottomLeft = GUICtrlCreateRadio("BottomLeft", 12, 110, 65, 17)
 Global $GUI_rb_BottomRight = GUICtrlCreateRadio("BottomRight", 84, 110, 73, 17)
 
 Global $GUI_l_OverlayOffSetX = GUICtrlCreateLabel("X", 190, 40, 11, 17)
 Global $GUI_l_OverlayOffSetY = GUICtrlCreateLabel("Y", 190, 64, 11, 17)
-Global $GUI_i_OverlayOffSetX = GUICtrlCreateInput($PingOverlayOffsetX, 205, 40, 33, 21, BitOR($GUI_SS_DEFAULT_INPUT, $ES_NUMBER))
-Global $GUI_i_OverlayOffSetY = GUICtrlCreateInput($PingOverlayOffsetY, 205, 64, 33, 21, BitOR($GUI_SS_DEFAULT_INPUT, $ES_NUMBER))
+Global $GUI_i_OverlayOffSetX = GUICtrlCreateInput("50", 205, 40, 33, 21, BitOR($GUI_SS_DEFAULT_INPUT, $ES_NUMBER))
+Global $GUI_i_OverlayOffSetY = GUICtrlCreateInput("50", 205, 64, 33, 21, BitOR($GUI_SS_DEFAULT_INPUT, $ES_NUMBER))
 
 ; Create Picker2 with custom color palette
 Global $GUI_cp_PingLabel = _GUIColorPicker_Create('', 10, 60, 50, 23, $OverlayLabelColor, BitOR($CP_FLAG_CHOOSERBUTTON, $CP_FLAG_ARROWSTYLE, $CP_FLAG_MOUSEWHEEL), $aPalette, 4, 5, 0, '', 'More...')
 Global $GUI_cp_PingBG = _GUIColorPicker_Create('', 75, 60, 50, 23, $PingBGColor, BitOR($CP_FLAG_CHOOSERBUTTON, $CP_FLAG_ARROWSTYLE, $CP_FLAG_MOUSEWHEEL), $aPalette, 4, 5, 0, '', 'More...')
 Global $GUI_s_OverlayTP = GUICtrlCreateSlider(168, 96, 70, 29, BitOR($GUI_SS_DEFAULT_SLIDER, $TBS_NOTICKS))
 GUICtrlSetLimit(-1, 255, 0)
-GUICtrlSetData(-1, $pingTransVal)
+GUICtrlSetData(-1, 255)
 GUICtrlCreateGroup("", -99, -99, 1, 1)
 GUICtrlCreateTabItem("")
 Dim $GUI_f_Pinger_AccelTable[3][2] = [["{F5}", $GUI_smi_Start], ["{F6}", $GUI_smi_Stop], ["{F1}", $GUI_smi_HelpSub]]
 GUISetAccelerators($GUI_f_Pinger_AccelTable)
 
 If $DebugState = 1 Then
+
 	$DebugGuiState = 1
 
 	Global $GUI_ts_Debug = GUICtrlCreateTabItem("Debug")
@@ -198,20 +172,20 @@ If $DebugState = 1 Then
 EndIf
 
 GUISetState(@SW_SHOW)
-#EndRegion ### ------ GUI ------ ###
+#EndRegion ### GUI ###
 
 #Region ### ------ PingGUI ------ ###
 Global $PingOverlay = GUICreate("4Wobi-PingerOverlay", $GUI_cor_PingOverlayW, $GUI_cor_PingOverlayH, 0, 0, $WS_POPUP, $WS_EX_LAYERED + $WS_EX_TOOLWINDOW)
-WinMove($PingOverlay, "", 0 + $PingOverlayOffsetX, 0 + $PingOverlayOffsetY)
+WinMove($PingOverlay, "", 0 + 50, 0 + 50)
 GUISetBkColor($PingOVerlayColorTrans)
 _WinAPI_SetLayeredWindowAttributes($PingOverlay, $PingOVerlayColorTrans, 255)    ; Bildhintergrund transparent machen.
 WinSetOnTop($PingOverlay, "", $WINDOWS_ONTOP)
 Global $GUI_l_PingOverlay = GUICtrlCreateLabel("Ping", 0, 0, 71, 42, $SS_CENTER)
-GUICtrlSetFont(-1, 25, 700, 0, $PingFont)
+GUICtrlSetFont(-1, 25, 700, 0, "MS Sans Serif")
 GUICtrlSetColor(-1, $OverlayLabelColor)
 ;GUISetState(@SW_HIDE, $PingOverlay)
 GUISetState(@SW_SHOW, $PingOverlay)
-#EndRegion ### ------ PingGUI ------ ###
+#EndRegion ### PingGUI ###
 
 Global $Tray_mi_OpenClose = TrayCreateItem("Open/Close")
 Global $Tray_m_Overlay = TrayCreateMenu("Overlay")
@@ -223,10 +197,17 @@ Global $Tray_mi_Exit = TrayCreateItem("Exit")
 TraySetState($TRAY_ICONSTATE_SHOW)
 TraySetToolTip("4Wobi - Pinger")
 
-local_ip()
-external_ip()
 
-setGUI()
+If FileExists(@ScriptDir & "\log") Then
+Else
+	DirCreate(@ScriptDir & "\log")
+EndIf
+
+If FileExists(@ScriptDir & "\settings") Then
+Else
+	DirCreate(@ScriptDir & "\settings")
+EndIf
+
 
 While 1
 	Sleep($gSleep)
@@ -239,8 +220,6 @@ While 1
 	EndIf
 
 	Switch $nMsg
-		Case -7
-			SetOnTop($PingOverlay)
 		Case $GUI_EVENT_CLOSE
 			Exit
 
@@ -257,9 +236,6 @@ While 1
 		Case $GUI_smi_Stop
 			StopPing()
 
-		Case $GUI_smi_Save
-			saveSettings()
-
 		Case $GUI_smi_AlwaysOnTop
 			AoT()
 
@@ -270,7 +246,6 @@ While 1
 			ShellExecute(@ScriptDir & "\4Wobi-Pinger.chm")
 
 		Case $GUI_i_Delay
-			$pingVal = GUICtrlRead($GUI_i_Delay)
 			debug("$GUI_i_Delay: " & GUICtrlRead($GUI_i_Delay))
 
 		Case $GUI_i_Adress
@@ -299,12 +274,11 @@ While 1
 					$SavePingtoFile = 1
 				Case 4
 					$SavePingtoFile = 0
+
 			EndSwitch
 
 		Case $GUI_s_OverlayTP
 			_WinAPI_SetLayeredWindowAttributes($PingOverlay, $PingOVerlayColorTrans, GUICtrlRead($GUI_s_OverlayTP))
-			$pingTransVal = GUICtrlRead($GUI_s_OverlayTP)
-			debug(GUICtrlRead($GUI_s_OverlayTP))
 		Case $GUI_rb_TopLeft
 			WinMove($PingOverlay, "", 0 + $PingOverlayOffsetX, 0 + $PingOverlayOffsetY)
 		Case $GUI_rb_TopRight
@@ -319,21 +293,17 @@ While 1
 				Case 1
 					GUISetState(@SW_SHOW, $PingOverlay)
 					$is_overlayd = 0
-					$OverlayActive = 1
 				Case 4
 					GUISetState(@SW_HIDE, $PingOverlay)
 					$is_overlayd = 1
-					$OverlayActive = 0
 			EndSwitch
 
 		Case $GUI_cb_OverlayBG
 			Switch GUICtrlRead($GUI_cb_OverlayBG)
 				Case 1
 					GUISetBkColor($PingBGColor, $PingOverlay)
-					$OVerlayBgActive = 1
 				Case 4
 					GUISetBkColor($PingOVerlayColorTrans, $PingOverlay)
-					$OVerlayBgActive = 0
 			EndSwitch
 
 		Case $GUI_i_OverlayOffSetX
@@ -416,7 +386,6 @@ Func UDF_Ping()
 		If _IsInternetConnected() = True Then
 			debug("IsInternet=TRUE")
 		Else
-			debug("IsInternet=FALSE")
 		EndIf
 
 		Local $ping = Ping($pingadress, ($GUI_i_Delay))
@@ -481,24 +450,12 @@ Func UDF_Ping()
 		TraySetToolTip("4Wobi - Pinger: " & $ping & "ms")
 
 		If $SavePingtoFile = 1 Then
-			SavePingToFile($ping)
-			; Local $message = _Now() & @TAB & $pingadress & @TAB & $ping
-			; FileWriteLine($logpath, $message)
-			; debug("Save to File: " & @TAB & $logpath & @CRLF & @TAB & @TAB & @TAB & "msg:" & $message)
+			Local $message = _Now() & @TAB & $pingadress & @TAB & $ping
+			FileWriteLine($logpath, $message)
+			debug("Save to File: " & @TAB & $logpath & @CRLF & @TAB & @TAB & @TAB & "msg:" & $message)
 		EndIf
 	EndIf
 EndFunc   ;==>UDF_Ping
-
-Func SavePingToFile($ping)
-	Local $i_StampNow = _TimeGetStamp()
-	;Local $s_MakeString = _StringFormatTime($s_DefMakeString, $i_StampNow)
-	;Local $s_Value = _StringFormatTime('%#c', $i_StampNow)
-
-	Local $message = ($i_StampNow & "," & $pingadress & "," & $ping)
-	FileWriteLine($logpath, $message)
-
-
-EndFunc   ;==>SavePingToFile
 
 Func InputAddress()
 	$pingadress = GUICtrlRead($GUI_i_Adress)
@@ -521,8 +478,11 @@ Func OverlayOffset()
 
 	ElseIf GUICtrlRead($GUI_rb_BottomRight) = $GUI_CHECKED Then
 		WinMove($PingOverlay, "", @DesktopWidth - $PingOverlayOffsetX - $GUI_cor_PingOverlayW, @DesktopHeight - $PingOverlayOffsetY - $GUI_cor_PingOverlayH)
+
 	Else
+
 	EndIf
+
 	debug("$PingOverlayOffsetX: " & $PingOverlayOffsetX & @CRLF & "$PingOverlayOffsetX: " & $PingOverlayOffsetY)
 EndFunc   ;==>OverlayOffset
 
@@ -534,6 +494,7 @@ Func AoT()
 		GUICtrlSetState($GUI_smi_AlwaysOnTop, $GUI_CHECKED)
 		WinSetOnTop($GUI_f_Pinger, "", $WINDOWS_ONTOP)
 	EndIf
+
 	debug("$GUI_smi_AlwaysOnTop: " & GUICtrlRead($GUI_smi_AlwaysOnTop))
 EndFunc   ;==>AoT
 
@@ -544,7 +505,9 @@ Func DebugTab()
 	Else
 		GUICtrlSetState($GUI_smi_Debug, $GUI_CHECKED)
 		$DebugState = 1
+
 	EndIf
+
 	debug("$DebugState: " & $DebugState)
 EndFunc   ;==>DebugTab
 
@@ -627,7 +590,7 @@ Func AboutFunc()
 				GUIDelete($GUI_f_About)
 				ExitLoop
 			Case $GUI_b_Website
-				ShellExecute("https://4wobi.com/pinger")
+				Shellexecute("https://4wobi.com/pinger")
 			Case $GUI_b_Forum
 			Case $GUI_b_Donate
 		EndSwitch
@@ -641,121 +604,6 @@ Func AboutFunc()
 	EndIf
 EndFunc   ;==>AboutFunc
 
-Func checkSettings()
-	;If Not Exist Create Settings.ini File
-	If Not FileExists($settingspath) Then
-		IniWrite($settingspath, "OVERLAY", "OverlayOn", "1")
-		IniWrite($settingspath, "OVERLAY", "BackgroundOn", "0")
-		IniWrite($settingspath, "OVERLAY", "ColorText", "0xFFFF00")
-		IniWrite($settingspath, "OVERLAY", "ColorBackground", "0x000000")
-		IniWrite($settingspath, "OVERLAY", "OffsetX", "50")
-		IniWrite($settingspath, "OVERLAY", "OffsetY", "50")
-		IniWrite($settingspath, "OVERLAY", "Position", "0")
-		IniWrite($settingspath, "OVERLAY", "Transparency", "255")
-		IniWrite($settingspath, "OVERLAY", "Font", "Rubik")
-
-		IniWrite($settingspath, "PING", "Delay", "500")
-		IniWrite($settingspath, "PING", "Adress", "8.8.8.8")
-		IniWrite($settingspath, "PING", "SaveData", "0")
-
-		IniWrite($settingspath, "DEBUG", "Debug", "0")
-		IniWrite($settingspath, "DEBUG", "DebugAutoScroll", "1")
-	EndIf
-EndFunc   ;==>checkSettings
-
-Func saveSettings()
-	; Check File
-	checkSettings()
-	; Save To File
-
-	; OVERLAY
-	IniWrite($settingspath, "OVERLAY", "OverlayOn", $OverlayActive)
-	IniWrite($settingspath, "OVERLAY", "BackgroundOn", $OVerlayBgActive)
-	IniWrite($settingspath, "OVERLAY", "ColorText", String($OverlayLabelColor))
-	IniWrite($settingspath, "OVERLAY", "ColorBackground", String($PingBGColor))
-	IniWrite($settingspath, "OVERLAY", "OffsetX", $PingOverlayOffsetX)
-	IniWrite($settingspath, "OVERLAY", "OffsetY", $PingOverlayOffsetY)
-	IniWrite($settingspath, "OVERLAY", "Position", evalOverlayPos())
-	IniWrite($settingspath, "OVERLAY", "Transparency", $pingTransVal)
-	IniWrite($settingspath, "OVERLAY", "Font", $PingFont)
-	; PING
-	IniWrite($settingspath, "PING", "Delay", $pingVal)
-	IniWrite($settingspath, "PING", "Adress", $pingadress)
-	IniWrite($settingspath, "PING", "SaveData", $SavePingtoFile)
-	; DEBUG
-	IniWrite($settingspath, "DEBUG", "Debug", $DebugState)
-	IniWrite($settingspath, "DEBUG", "DebugAutoScroll", $Debug_AutoScoll)
-EndFunc   ;==>saveSettings
-
-Func loadSettings()
-	; Check File
-	checkSettings()
-	; Set Variable ;READ FILE
-	; OVERLAY
-	$OverlayActive = IniRead($settingspath, "OVERLAY", "OverlayOn", "1")
-	$OVerlayBgActive = IniRead($settingspath, "OVERLAY", "BackgroundOn", "0")
-	$OverlayLabelColor = IniRead($settingspath, "OVERLAY", "ColorText", "0xFFFF00")
-	$PingBGColor = IniRead($settingspath, "OVERLAY", "ColorBackground", "0x000000")
-	$PingOverlayOffsetX = IniRead($settingspath, "OVERLAY", "OffsetX", "50")
-	$PingOverlayOffsetY = IniRead($settingspath, "OVERLAY", "OffsetY", "50")
-	$pingPos = IniRead($settingspath, "OVERLAY", "Position", "0")
-	$pingTransVal = IniRead($settingspath, "OVERLAY", "Transparency", "255")
-	$PingFont = IniRead($settingspath, "OVERLAY", "Font", "Rubik")
-	; PING
-	$pingVal = IniRead($settingspath, "PING", "Delay", "500")
-	$pingadress = IniRead($settingspath, "PING", "Adress", "8.8.8.8")
-	$SavePingtoFile = IniRead($settingspath, "PING", "SaveData", "0")
-	; DEBUG
-	$DebugState = IniRead($settingspath, "DEBUG", "Debug", "0")
-	$Debug_AutoScoll = IniRead($settingspath, "DEBUG", "DebugAutoScroll", "1")
-EndFunc   ;==>loadSettings
-
-Func evalOverlayPos()
-	Local $l_i_pos = 0
-	If GUICtrlRead($GUI_rb_TopLeft) = $GUI_CHECKED Then
-		$l_i_pos = 0
-	ElseIf GUICtrlRead($GUI_rb_TopRight) = $GUI_CHECKED Then
-		$l_i_pos = 1
-	ElseIf GUICtrlRead($GUI_rb_BottomLeft) = $GUI_CHECKED Then
-		$l_i_pos = 2
-	ElseIf GUICtrlRead($GUI_rb_BottomRight) = $GUI_CHECKED Then
-		$l_i_pos = 3
-	Else
-		$l_i_pos = 0
-	EndIf
-	Return $l_i_pos
-EndFunc   ;==>evalOverlayPos
-
-Func SetOnTop($GUI)
-	WinSetOnTop($GUI, "", $WINDOWS_ONTOP)
-EndFunc   ;==>SetOnTop
-
-Func setGUI()
-	; SET GUI STUFF
-	If $pingPos = 0 Then
-		GUICtrlSetState($GUI_rb_TopLeft, $GUI_CHECKED)
-		WinMove($PingOverlay, "", 0 + $PingOverlayOffsetX, 0 + $PingOverlayOffsetY)
-	ElseIf $pingPos = 1 Then
-		GUICtrlSetState($GUI_rb_TopRight, $GUI_CHECKED)
-		WinMove($PingOverlay, "", @DesktopWidth - $PingOverlayOffsetX - $GUI_cor_PingOverlayW, 0 + $PingOverlayOffsetY)
-	ElseIf $pingPos = 2 Then
-		GUICtrlSetState($GUI_rb_BottomLeft, $GUI_CHECKED)
-		WinMove($PingOverlay, "", 0 + $PingOverlayOffsetX, @DesktopHeight - $PingOverlayOffsetY - $GUI_cor_PingOverlayH)
-	ElseIf $pingPos = 3 Then
-		GUICtrlSetState($GUI_rb_BottomRight, $GUI_CHECKED)
-		WinMove($PingOverlay, "", @DesktopWidth - $PingOverlayOffsetX - $GUI_cor_PingOverlayW, @DesktopHeight - $PingOverlayOffsetY - $GUI_cor_PingOverlayH)
-	EndIf
-
-	; OVERLAY
-	If $OverlayActive >= 1 Then GUICtrlSetState($GUI_cb_Overlay, $GUI_CHECKED)
-	If $OVerlayBgActive >= 1 Then GUICtrlSetState($GUI_cb_OverlayBG, $GUI_CHECKED)
-	; PING
-	If $SavePingtoFile >= 1 Then GUICtrlSetState($GUI_cb_SavePingToFile, $GUI_CHECKED)
-	; DEBUG
-	If $DebugState >= 1 Then GUICtrlSetState($GUI_smi_Debug, $GUI_CHECKED)
-	; If $Debug_AutoScoll >= 1 Then GUICtrlSetState() ; NOGUI
-EndFunc   ;==>setGUI
-
 Func _IsInternetConnected()
 	Local $aReturn = DllCall('connect.dll', 'long', 'IsInternetConnected')
 	If @error Then
@@ -764,36 +612,8 @@ Func _IsInternetConnected()
 	Return $aReturn[0] = 0
 EndFunc   ;==>_IsInternetConnected
 
-Func external_ip()
-	debug("Fetching External IP")
-	Local $sPublicIP = _GetIP()
-	debug("External IP: " & $sPublicIP)
-	Return $sPublicIP
-EndFunc   ;==>external_ip
-
-Func local_ip()
-	debug("Local IP: ")
-	If @IPAddress1 <> "0.0.0.0" Then
-		debug(@IPAddress1)
-		Return @IPAddress1
-	ElseIf @IPAddress2 <> "0.0.0.0" Then
-		debug(@IPAddress2)
-		Return @IPAddress2
-	ElseIf @IPAddress3 <> "0.0.0.0" Then
-		debug(@IPAddress3)
-		Return @IPAddress3
-	ElseIf @IPAddress4 <> "0.0.0.0" Then
-		debug(@IPAddress4)
-		Return @IPAddress4
-	Else
-		ConsoleWrite("NO IP FOUND")
-	EndIf
-EndFunc   ;==>local_ip
-
-
-
 Func debug($a)
-	If $DebugState = 1 Then
+	If $DebugState = 1 Then 
 		;Console Debug
 		ConsoleWrite(_NowTime() & @TAB & " " & $a & @CRLF)
 

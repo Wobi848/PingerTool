@@ -2,8 +2,8 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=ico_apM_icon.ico
 #AutoIt3Wrapper_Res_Description=Pinging tool
-#AutoIt3Wrapper_Res_Fileversion=0.0.0.8
-#AutoIt3Wrapper_Res_ProductVersion=0.0.0.8
+#AutoIt3Wrapper_Res_Fileversion=0.0.0.6
+#AutoIt3Wrapper_Res_ProductVersion=0.0.0.6
 #AutoIt3Wrapper_Res_CompanyName=4Wobi
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
@@ -11,10 +11,10 @@
 
 Program: Ping-Overlay
 Author:	Wobi
+Date:	12.06.2021
+Version: 0.0.0.6
 
 	Copyright (C) 2021 4Wobi.com - All rights reserved.
-
-	THIS IS AN UNFINISHED PROJECT - Feel free to use and modify
 
 #ce ----------------------------------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ Author:	Wobi
 #include <WinApi.au3>
 #include <MsgBoxConstants.au3>
 #include <GuiTab.au3>
-#include <lib\ColorPicker.au3>
+#include <lib/ColorPicker.au3>
 #include <WinAPISysWin.au3>
 #include <Constants.au3>
 #include <GUIConstants.au3>
@@ -38,8 +38,6 @@ Author:	Wobi
 #include <WindowsConstants.au3>
 #include <SliderConstants.au3>
 #include <GuiListBox.au3>
-#include <lib\UnixTime.au3>
-#include <Inet.au3>
 
 Opt('MustDeclareVars', 1)
 Opt("TrayOnEventMode", 0)
@@ -52,10 +50,10 @@ TraySetClick(16)
 
 #Region ### ------ Global Variable ------ ###
 
-Global $VERSION = "0.0.0.8"
-Global $VDate = "18.06.2021"
+Global $VERSION = "0.0.0.6"
+Global $VDate = "13.06.2021"
 
-Dim Const $logpath = @ScriptDir & "\log\" & _NowDate() & ".csv"
+Dim Const $logpath = @ScriptDir & "\log\" & _NowDate() & ".log"
 Dim Const $settingspath = @ScriptDir & "\config\" & "settings.ini"
 Global $is_minimized = 0
 Global $SleepTime = 1000
@@ -82,6 +80,7 @@ Dim $aPalette[20] = _
 
 #EndRegion ### ------ Global Variable ------ ###
 
+
 #Region ### Folders ###
 If FileExists(@ScriptDir & "\log") Then
 Else
@@ -95,6 +94,7 @@ EndIf
 #EndRegion ### Folders ###
 
 #Region ### Load_File ###
+
 ; Create Variable
 Global $pingVal = 500
 Global $DebugState = 0
@@ -114,6 +114,7 @@ Global $OVerlayBgActive = 0
 Global $PingFont = "Rubik"
 
 loadSettings()
+
 #EndRegion ### Load_File ###
 
 #Region ### ------ GUI ------ ###
@@ -223,10 +224,7 @@ Global $Tray_mi_Exit = TrayCreateItem("Exit")
 TraySetState($TRAY_ICONSTATE_SHOW)
 TraySetToolTip("4Wobi - Pinger")
 
-local_ip()
-external_ip()
-
-setGUI()
+SetGui()
 
 While 1
 	Sleep($gSleep)
@@ -239,8 +237,6 @@ While 1
 	EndIf
 
 	Switch $nMsg
-		Case -7
-			SetOnTop($PingOverlay)
 		Case $GUI_EVENT_CLOSE
 			Exit
 
@@ -299,6 +295,7 @@ While 1
 					$SavePingtoFile = 1
 				Case 4
 					$SavePingtoFile = 0
+
 			EndSwitch
 
 		Case $GUI_s_OverlayTP
@@ -330,10 +327,10 @@ While 1
 			Switch GUICtrlRead($GUI_cb_OverlayBG)
 				Case 1
 					GUISetBkColor($PingBGColor, $PingOverlay)
-					$OVerlayBgActive = 1
+					$OverlayBGActive = 1
 				Case 4
 					GUISetBkColor($PingOVerlayColorTrans, $PingOverlay)
-					$OVerlayBgActive = 0
+					$OverlayBGActive = 0
 			EndSwitch
 
 		Case $GUI_i_OverlayOffSetX
@@ -416,7 +413,6 @@ Func UDF_Ping()
 		If _IsInternetConnected() = True Then
 			debug("IsInternet=TRUE")
 		Else
-			debug("IsInternet=FALSE")
 		EndIf
 
 		Local $ping = Ping($pingadress, ($GUI_i_Delay))
@@ -481,24 +477,12 @@ Func UDF_Ping()
 		TraySetToolTip("4Wobi - Pinger: " & $ping & "ms")
 
 		If $SavePingtoFile = 1 Then
-			SavePingToFile($ping)
-			; Local $message = _Now() & @TAB & $pingadress & @TAB & $ping
-			; FileWriteLine($logpath, $message)
-			; debug("Save to File: " & @TAB & $logpath & @CRLF & @TAB & @TAB & @TAB & "msg:" & $message)
+			Local $message = _Now() & @TAB & $pingadress & @TAB & $ping
+			FileWriteLine($logpath, $message)
+			debug("Save to File: " & @TAB & $logpath & @CRLF & @TAB & @TAB & @TAB & "msg:" & $message)
 		EndIf
 	EndIf
 EndFunc   ;==>UDF_Ping
-
-Func SavePingToFile($ping)
-	Local $i_StampNow = _TimeGetStamp()
-	;Local $s_MakeString = _StringFormatTime($s_DefMakeString, $i_StampNow)
-	;Local $s_Value = _StringFormatTime('%#c', $i_StampNow)
-
-	Local $message = ($i_StampNow & "," & $pingadress & "," & $ping)
-	FileWriteLine($logpath, $message)
-
-
-EndFunc   ;==>SavePingToFile
 
 Func InputAddress()
 	$pingadress = GUICtrlRead($GUI_i_Adress)
@@ -521,8 +505,11 @@ Func OverlayOffset()
 
 	ElseIf GUICtrlRead($GUI_rb_BottomRight) = $GUI_CHECKED Then
 		WinMove($PingOverlay, "", @DesktopWidth - $PingOverlayOffsetX - $GUI_cor_PingOverlayW, @DesktopHeight - $PingOverlayOffsetY - $GUI_cor_PingOverlayH)
+
 	Else
+
 	EndIf
+
 	debug("$PingOverlayOffsetX: " & $PingOverlayOffsetX & @CRLF & "$PingOverlayOffsetX: " & $PingOverlayOffsetY)
 EndFunc   ;==>OverlayOffset
 
@@ -534,6 +521,7 @@ Func AoT()
 		GUICtrlSetState($GUI_smi_AlwaysOnTop, $GUI_CHECKED)
 		WinSetOnTop($GUI_f_Pinger, "", $WINDOWS_ONTOP)
 	EndIf
+
 	debug("$GUI_smi_AlwaysOnTop: " & GUICtrlRead($GUI_smi_AlwaysOnTop))
 EndFunc   ;==>AoT
 
@@ -544,7 +532,9 @@ Func DebugTab()
 	Else
 		GUICtrlSetState($GUI_smi_Debug, $GUI_CHECKED)
 		$DebugState = 1
+
 	EndIf
+
 	debug("$DebugState: " & $DebugState)
 EndFunc   ;==>DebugTab
 
@@ -644,8 +634,8 @@ EndFunc   ;==>AboutFunc
 Func checkSettings()
 	;If Not Exist Create Settings.ini File
 	If Not FileExists($settingspath) Then
-		IniWrite($settingspath, "OVERLAY", "OverlayOn", "1")
-		IniWrite($settingspath, "OVERLAY", "BackgroundOn", "0")
+		IniWrite($settingspath, "OVERLAY", "OverlayOn", "True")
+		IniWrite($settingspath, "OVERLAY", "BackgroundOn", "False")
 		IniWrite($settingspath, "OVERLAY", "ColorText", "0xFFFF00")
 		IniWrite($settingspath, "OVERLAY", "ColorBackground", "0x000000")
 		IniWrite($settingspath, "OVERLAY", "OffsetX", "50")
@@ -656,12 +646,12 @@ Func checkSettings()
 
 		IniWrite($settingspath, "PING", "Delay", "500")
 		IniWrite($settingspath, "PING", "Adress", "8.8.8.8")
-		IniWrite($settingspath, "PING", "SaveData", "0")
+		IniWrite($settingspath, "PING", "SaveData", "False")
 
-		IniWrite($settingspath, "DEBUG", "Debug", "0")
-		IniWrite($settingspath, "DEBUG", "DebugAutoScroll", "1")
+		IniWrite($settingspath, "DEBUG", "Debug", "False")
+		IniWrite($settingspath, "DEBUG", "DebugAutoScroll", "True")
 	EndIf
-EndFunc   ;==>checkSettings
+EndFunc
 
 Func saveSettings()
 	; Check File
@@ -704,11 +694,14 @@ Func loadSettings()
 	; PING
 	$pingVal = IniRead($settingspath, "PING", "Delay", "500")
 	$pingadress = IniRead($settingspath, "PING", "Adress", "8.8.8.8")
-	$SavePingtoFile = IniRead($settingspath, "PING", "SaveData", "0")
+	$SavePingtoFile = IniRead($settingspath, "PING", "SaveData", "False")
 	; DEBUG
 	$DebugState = IniRead($settingspath, "DEBUG", "Debug", "0")
 	$Debug_AutoScoll = IniRead($settingspath, "DEBUG", "DebugAutoScroll", "1")
 EndFunc   ;==>loadSettings
+
+Func hexing()
+EndFunc
 
 Func evalOverlayPos()
 	Local $l_i_pos = 0
@@ -724,37 +717,29 @@ Func evalOverlayPos()
 		$l_i_pos = 0
 	EndIf
 	Return $l_i_pos
-EndFunc   ;==>evalOverlayPos
-
-Func SetOnTop($GUI)
-	WinSetOnTop($GUI, "", $WINDOWS_ONTOP)
-EndFunc   ;==>SetOnTop
+EndFunc
 
 Func setGUI()
-	; SET GUI STUFF
+; SET GUI STUFF
 	If $pingPos = 0 Then
 		GUICtrlSetState($GUI_rb_TopLeft, $GUI_CHECKED)
-		WinMove($PingOverlay, "", 0 + $PingOverlayOffsetX, 0 + $PingOverlayOffsetY)
 	ElseIf $pingPos = 1 Then
 		GUICtrlSetState($GUI_rb_TopRight, $GUI_CHECKED)
-		WinMove($PingOverlay, "", @DesktopWidth - $PingOverlayOffsetX - $GUI_cor_PingOverlayW, 0 + $PingOverlayOffsetY)
 	ElseIf $pingPos = 2 Then
 		GUICtrlSetState($GUI_rb_BottomLeft, $GUI_CHECKED)
-		WinMove($PingOverlay, "", 0 + $PingOverlayOffsetX, @DesktopHeight - $PingOverlayOffsetY - $GUI_cor_PingOverlayH)
 	ElseIf $pingPos = 3 Then
 		GUICtrlSetState($GUI_rb_BottomRight, $GUI_CHECKED)
-		WinMove($PingOverlay, "", @DesktopWidth - $PingOverlayOffsetX - $GUI_cor_PingOverlayW, @DesktopHeight - $PingOverlayOffsetY - $GUI_cor_PingOverlayH)
 	EndIf
 
 	; OVERLAY
 	If $OverlayActive >= 1 Then GUICtrlSetState($GUI_cb_Overlay, $GUI_CHECKED)
-	If $OVerlayBgActive >= 1 Then GUICtrlSetState($GUI_cb_OverlayBG, $GUI_CHECKED)
+	If $OVerlayBgActive >= 1 Then GUICtrlSetState( $GUI_cb_OverlayBG, $GUI_CHECKED)
 	; PING
-	If $SavePingtoFile >= 1 Then GUICtrlSetState($GUI_cb_SavePingToFile, $GUI_CHECKED)
+	If $SavePingtoFile >= 1 Then  GUICtrlSetState( $GUI_cb_SavePingToFile, $GUI_CHECKED)
 	; DEBUG
-	If $DebugState >= 1 Then GUICtrlSetState($GUI_smi_Debug, $GUI_CHECKED)
-	; If $Debug_AutoScoll >= 1 Then GUICtrlSetState() ; NOGUI
-EndFunc   ;==>setGUI
+	;	$DebugState
+	;	$Debug_AutoScoll
+EndFunc
 
 Func _IsInternetConnected()
 	Local $aReturn = DllCall('connect.dll', 'long', 'IsInternetConnected')
@@ -763,34 +748,6 @@ Func _IsInternetConnected()
 	EndIf
 	Return $aReturn[0] = 0
 EndFunc   ;==>_IsInternetConnected
-
-Func external_ip()
-	debug("Fetching External IP")
-	Local $sPublicIP = _GetIP()
-	debug("External IP: " & $sPublicIP)
-	Return $sPublicIP
-EndFunc   ;==>external_ip
-
-Func local_ip()
-	debug("Local IP: ")
-	If @IPAddress1 <> "0.0.0.0" Then
-		debug(@IPAddress1)
-		Return @IPAddress1
-	ElseIf @IPAddress2 <> "0.0.0.0" Then
-		debug(@IPAddress2)
-		Return @IPAddress2
-	ElseIf @IPAddress3 <> "0.0.0.0" Then
-		debug(@IPAddress3)
-		Return @IPAddress3
-	ElseIf @IPAddress4 <> "0.0.0.0" Then
-		debug(@IPAddress4)
-		Return @IPAddress4
-	Else
-		ConsoleWrite("NO IP FOUND")
-	EndIf
-EndFunc   ;==>local_ip
-
-
 
 Func debug($a)
 	If $DebugState = 1 Then

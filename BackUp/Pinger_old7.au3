@@ -14,7 +14,7 @@ Author:	Wobi
 
 	Copyright (C) 2021 4Wobi.com - All rights reserved.
 
-	THIS IS AN UNFINISHED PROJECT - Feel free to use and modify
+	THIS IS AN UNFINISHED PROJECT - Feel free to use and modify it
 
 #ce ----------------------------------------------------------------------------------------------
 
@@ -222,9 +222,6 @@ Global $Tray_mi_Exit = TrayCreateItem("Exit")
 
 TraySetState($TRAY_ICONSTATE_SHOW)
 TraySetToolTip("4Wobi - Pinger")
-
-local_ip()
-external_ip()
 
 setGUI()
 
@@ -764,14 +761,13 @@ Func _IsInternetConnected()
 	Return $aReturn[0] = 0
 EndFunc   ;==>_IsInternetConnected
 
-Func external_ip()
-	debug("Fetching External IP")
+Func ex_ip()
 	Local $sPublicIP = _GetIP()
 	debug("External IP: " & $sPublicIP)
 	Return $sPublicIP
-EndFunc   ;==>external_ip
+EndFunc   ;==>ips
 
-Func local_ip()
+Func lo_ip()
 	debug("Local IP: ")
 	If @IPAddress1 <> "0.0.0.0" Then
 		debug(@IPAddress1)
@@ -788,7 +784,7 @@ Func local_ip()
 	Else
 		ConsoleWrite("NO IP FOUND")
 	EndIf
-EndFunc   ;==>local_ip
+EndFunc
 
 
 

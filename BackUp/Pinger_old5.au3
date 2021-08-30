@@ -2,8 +2,8 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=ico_apM_icon.ico
 #AutoIt3Wrapper_Res_Description=Pinging tool
-#AutoIt3Wrapper_Res_Fileversion=0.0.0.8
-#AutoIt3Wrapper_Res_ProductVersion=0.0.0.8
+#AutoIt3Wrapper_Res_Fileversion=0.0.0.7
+#AutoIt3Wrapper_Res_ProductVersion=0.0.0.7
 #AutoIt3Wrapper_Res_CompanyName=4Wobi
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
@@ -11,10 +11,13 @@
 
 Program: Ping-Overlay
 Author:	Wobi
+Date:	12.06.2021
+Version: 0.0.0.7
 
 	Copyright (C) 2021 4Wobi.com - All rights reserved.
 
-	THIS IS AN UNFINISHED PROJECT - Feel free to use and modify
+	UPDATE: LOG System
+			PING Adresses Selection
 
 #ce ----------------------------------------------------------------------------------------------
 
@@ -39,7 +42,6 @@ Author:	Wobi
 #include <SliderConstants.au3>
 #include <GuiListBox.au3>
 #include <lib\UnixTime.au3>
-#include <Inet.au3>
 
 Opt('MustDeclareVars', 1)
 Opt("TrayOnEventMode", 0)
@@ -52,10 +54,10 @@ TraySetClick(16)
 
 #Region ### ------ Global Variable ------ ###
 
-Global $VERSION = "0.0.0.8"
-Global $VDate = "18.06.2021"
+Global $VERSION = "0.0.0.7"
+Global $VDate = "15.06.2021"
 
-Dim Const $logpath = @ScriptDir & "\log\" & _NowDate() & ".csv"
+Dim Const $logpath = @ScriptDir & "\log\" & _NowDate() & ".log"
 Dim Const $settingspath = @ScriptDir & "\config\" & "settings.ini"
 Global $is_minimized = 0
 Global $SleepTime = 1000
@@ -223,9 +225,6 @@ Global $Tray_mi_Exit = TrayCreateItem("Exit")
 TraySetState($TRAY_ICONSTATE_SHOW)
 TraySetToolTip("4Wobi - Pinger")
 
-local_ip()
-external_ip()
-
 setGUI()
 
 While 1
@@ -239,8 +238,6 @@ While 1
 	EndIf
 
 	Switch $nMsg
-		Case -7
-			SetOnTop($PingOverlay)
 		Case $GUI_EVENT_CLOSE
 			Exit
 
@@ -481,24 +478,15 @@ Func UDF_Ping()
 		TraySetToolTip("4Wobi - Pinger: " & $ping & "ms")
 
 		If $SavePingtoFile = 1 Then
-			SavePingToFile($ping)
-			; Local $message = _Now() & @TAB & $pingadress & @TAB & $ping
-			; FileWriteLine($logpath, $message)
-			; debug("Save to File: " & @TAB & $logpath & @CRLF & @TAB & @TAB & @TAB & "msg:" & $message)
+			Local $message = _Now() & @TAB & $pingadress & @TAB & $ping
+			FileWriteLine($logpath, $message)
+			debug("Save to File: " & @TAB & $logpath & @CRLF & @TAB & @TAB & @TAB & "msg:" & $message)
 		EndIf
 	EndIf
 EndFunc   ;==>UDF_Ping
 
-Func SavePingToFile($ping)
-	Local $i_StampNow = _TimeGetStamp()
-	;Local $s_MakeString = _StringFormatTime($s_DefMakeString, $i_StampNow)
-	;Local $s_Value = _StringFormatTime('%#c', $i_StampNow)
-
-	Local $message = ($i_StampNow & "," & $pingadress & "," & $ping)
-	FileWriteLine($logpath, $message)
-
-
-EndFunc   ;==>SavePingToFile
+Func SavePingToFile()
+EndFunc
 
 Func InputAddress()
 	$pingadress = GUICtrlRead($GUI_i_Adress)
@@ -726,10 +714,6 @@ Func evalOverlayPos()
 	Return $l_i_pos
 EndFunc   ;==>evalOverlayPos
 
-Func SetOnTop($GUI)
-	WinSetOnTop($GUI, "", $WINDOWS_ONTOP)
-EndFunc   ;==>SetOnTop
-
 Func setGUI()
 	; SET GUI STUFF
 	If $pingPos = 0 Then
@@ -763,34 +747,6 @@ Func _IsInternetConnected()
 	EndIf
 	Return $aReturn[0] = 0
 EndFunc   ;==>_IsInternetConnected
-
-Func external_ip()
-	debug("Fetching External IP")
-	Local $sPublicIP = _GetIP()
-	debug("External IP: " & $sPublicIP)
-	Return $sPublicIP
-EndFunc   ;==>external_ip
-
-Func local_ip()
-	debug("Local IP: ")
-	If @IPAddress1 <> "0.0.0.0" Then
-		debug(@IPAddress1)
-		Return @IPAddress1
-	ElseIf @IPAddress2 <> "0.0.0.0" Then
-		debug(@IPAddress2)
-		Return @IPAddress2
-	ElseIf @IPAddress3 <> "0.0.0.0" Then
-		debug(@IPAddress3)
-		Return @IPAddress3
-	ElseIf @IPAddress4 <> "0.0.0.0" Then
-		debug(@IPAddress4)
-		Return @IPAddress4
-	Else
-		ConsoleWrite("NO IP FOUND")
-	EndIf
-EndFunc   ;==>local_ip
-
-
 
 Func debug($a)
 	If $DebugState = 1 Then
